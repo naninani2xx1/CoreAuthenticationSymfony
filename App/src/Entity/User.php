@@ -2,13 +2,17 @@
 
 namespace App\Entity;
 
+use App\ApiBundle\Groups\ArticleGroup;
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
+
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\LegacyPasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
-use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\ApiBundle\Groups\UserGroup;
@@ -23,12 +27,7 @@ use App\ApiBundle\State\UserStateProcessor;
 #[HasLifecycleCallbacks]
 #[ApiResource(
     operations: [
-        new Get(normalizationContext: ['groups' => UserGroup::USER_ITEM], stateless: true),
-        new GetCollection(
-            normalizationContext: ['groups' => UserGroup::USER_LIST],
-            stateless: true,
-            openapiContext: []
-        ),
+        new Get(stateless: true, normalizationContext: ['groups' => UserGroup::USER_ITEM]),
         new Patch(
             stateless: true,
             normalizationContext: ['groups' => UserGroup::USER_PATCH_ITEM],
@@ -36,13 +35,14 @@ use App\ApiBundle\State\UserStateProcessor;
         ),
         new Post(
             stateless: true,
-            processor: UserStateProcessor::class,
-            denormalizationContext: ['groups' => UserGroup::USER_POST_WRITE_ITEM],
             normalizationContext: ['groups' => UserGroup::USER_POST_READ_ITEM],
+            denormalizationContext: ['groups' => UserGroup::USER_POST_WRITE_ITEM],
+            security: "is_granted('ROLE_ADMIN')",
+            processor: UserStateProcessor::class,
         )
     ],
-    paginationEnabled: false,
     order: ['id' => 'DESC'],
+    paginationEnabled: false,
 )]
 class User implements UserInterface, LegacyPasswordAuthenticatedUserInterface
 {
@@ -50,18 +50,18 @@ class User implements UserInterface, LegacyPasswordAuthenticatedUserInterface
     #[ORM\GeneratedValue]
     #[ORM\Column]
     #[Groups([
-        UserGroup::USER_LIST, UserGroup::USER_ITEM, UserGroup::USER_PATCH_ITEM,
-        UserGroup::USER_AUTH_ITEM, UserGroup::USER_POST_READ_ITEM
+        UserGroup::USER_ITEM, UserGroup::USER_PATCH_ITEM,
+        UserGroup::USER_AUTH_ITEM, UserGroup::USER_POST_READ_ITEM,
     ])]
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
-    #[Groups([UserGroup::USER_LIST, UserGroup::USER_ITEM, UserGroup::USER_POST_READ_ITEM, UserGroup::USER_POST_WRITE_ITEM])]
+    #[Groups([UserGroup::USER_ITEM, UserGroup::USER_POST_READ_ITEM, UserGroup::USER_POST_WRITE_ITEM])]
     private ?string $username = null;
 
     #[ORM\Column(length: 180)]
     #[Groups([
-        UserGroup::USER_LIST, UserGroup::USER_ITEM, 
+        UserGroup::USER_ITEM, 
         UserGroup::USER_PATCH_ITEM, UserGroup::USER_AUTH_ITEM,
         UserGroup::USER_POST_WRITE_ITEM,
         UserGroup::USER_POST_READ_ITEM,
@@ -72,25 +72,32 @@ class User implements UserInterface, LegacyPasswordAuthenticatedUserInterface
      * @var list<string> The user roles
      */
     #[ORM\Column(type: "simple_array")]
-    #[Groups([UserGroup::USER_LIST, UserGroup::USER_ITEM])]
+    #[Groups([UserGroup::USER_ITEM])]
     private array $roles = [];
 
     /**
-     * @var string The hashed password
+     * @var null| string The hashed password
      */
     #[ORM\Column]
     #[Groups([UserGroup::USER_POST_WRITE_ITEM])]
     private ?string $password = null;
 
      /**
-     * @var string The hashed salt
+     * @var string | null The hashed salt
      */
     #[ORM\Column]
     private ?string $salt = null;
 
+    #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'author')]
+    private Collection $articles;
+
+    public function __construct()
+    {
+        $this->articles = new ArrayCollection();
+    }
 
     #[PrePersist]
-    public function prePersits(): void
+    public function prePersist(): void
     {
         $this->roles[] = 'ROLE_USER';
         $this->generateSalt();
@@ -190,9 +197,47 @@ class User implements UserInterface, LegacyPasswordAuthenticatedUserInterface
     }
 
 
-    public function generateSalt()
+    public function generateSalt(): void
     {
         $this->salt = md5(time());
     }
+
+    public function setSalt(string $salt): static
+    {
+        $this->salt = $salt;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Article>
+     */
+    public function getArticles(): Collection
+    {
+        return $this->articles;
+    }
+
+    public function addArticle(Article $article): static
+    {
+        if (!$this->articles->contains($article)) {
+            $this->articles->add($article);
+            $article->setAuthor($this);
+        }
+
+        return $this;
+    }
+
+    public function removeArticle(Article $article): static
+    {
+        if ($this->articles->removeElement($article)) {
+            // set the owning side to null (unless already changed)
+            if ($article->getAuthor() === $this) {
+                $article->setAuthor(null);
+            }
+        }
+
+        return $this;
+    }
+
     
 }
