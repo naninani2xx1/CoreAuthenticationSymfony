@@ -12,8 +12,8 @@ class UserStateProcessor implements ProcessorInterface
 {
     public function __construct(
         #[Autowire(service: 'api_platform.doctrine.orm.state.persist_processor')]
-        private ProcessorInterface $persistProcessor,
-        private UserPasswordHasherInterface $passwordHasher
+        private readonly ProcessorInterface $persistProcessor,
+        private readonly UserPasswordHasherInterface $passwordHasher
     ) {}
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = [])
@@ -23,7 +23,6 @@ class UserStateProcessor implements ProcessorInterface
             $data->setPassword($hashedPassword);
         }
 
-        // Gọi Processor mặc định của API Platform (có thể là Doctrine Processor)
         return  $this->persistProcessor->process($data, $operation, $uriVariables, $context);
     }
 }
