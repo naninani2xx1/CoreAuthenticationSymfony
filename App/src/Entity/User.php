@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiProperty;
 use App\ApiBundle\Groups\ArticleGroup;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -51,12 +52,13 @@ class User implements UserInterface, LegacyPasswordAuthenticatedUserInterface
     #[ORM\Column]
     #[Groups([
         UserGroup::USER_ITEM, UserGroup::USER_PATCH_ITEM,
-        UserGroup::USER_AUTH_ITEM, UserGroup::USER_POST_READ_ITEM,
+        UserGroup::USER_AUTH_ITEM, UserGroup::USER_POST_READ_ITEM, ArticleGroup::POST_READ_ITEM,
     ])]
+//    #[ApiProperty(writableLink: false)]
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
-    #[Groups([UserGroup::USER_ITEM, UserGroup::USER_POST_READ_ITEM, UserGroup::USER_POST_WRITE_ITEM])]
+    #[Groups([UserGroup::USER_ITEM, UserGroup::USER_POST_READ_ITEM, UserGroup::USER_POST_WRITE_ITEM, ArticleGroup::POST_READ_ITEM])]
     private ?string $username = null;
 
     #[ORM\Column(length: 180)]

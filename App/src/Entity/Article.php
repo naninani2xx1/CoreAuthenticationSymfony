@@ -5,9 +5,7 @@ namespace App\Entity;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Post;
-use App\ApiBundle\DTO\ArticleCreateInputDTO;
 use App\ApiBundle\Groups\ArticleGroup;
-use App\ApiBundle\State\ArticleCreateProcessor;
 use App\Repository\PostRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
@@ -16,23 +14,13 @@ use Symfony\Component\Serializer\Attribute\Groups;
 #[ORM\Table(name: '`post`')]
 #[ApiResource(
     operations: [
-//        new Post(
-//            stateless: true,
-//            normalizationContext: ['groups' => ArticleGroup::POST_READ_ITEM],
-//            denormalizationContext: ['groups' => ArticleGroup::POST_WRITE_ITEM],
-//            security: "is_granted('ROLE_USER')",
-//            input: ArticleCreateInputDTO::class,
-//            processor: ArticleCreateProcessor::class,
-//        ),
+        new Post(
+            stateless: true,
+            normalizationContext: ['groups' => ArticleGroup::POST_READ_ITEM],
+            denormalizationContext: ['groups' => ArticleGroup::POST_WRITE_ITEM],
+            security: "is_granted('ROLE_USER')",
+        ),
     ],
-)]
-#[Post(
-    stateless: true,
-    normalizationContext: ['groups' => ArticleGroup::POST_READ_ITEM],
-    denormalizationContext: ['groups' => ArticleGroup::POST_WRITE_ITEM],
-    security: "is_granted('ROLE_USER')",
-    input: ArticleCreateInputDTO::class,
-    processor: ArticleCreateProcessor::class,
 )]
 class Article
 {
