@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiProperty;
+use ApiPlatform\Metadata\Delete;
 use App\ApiBundle\Groups\ArticleGroup;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -40,7 +41,7 @@ use App\ApiBundle\State\UserStateProcessor;
             denormalizationContext: ['groups' => UserGroup::USER_POST_WRITE_ITEM],
             security: "is_granted('ROLE_ADMIN')",
             processor: UserStateProcessor::class,
-        )
+        ),
     ],
     order: ['id' => 'DESC'],
     paginationEnabled: false,
@@ -93,9 +94,13 @@ class User implements UserInterface, LegacyPasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'author')]
     private Collection $articles;
 
+    #[ORM\OneToMany(targetEntity: UserToken::class, mappedBy: 'user')]
+    private Collection $tokens;
+
     public function __construct()
     {
         $this->articles = new ArrayCollection();
+        $this->tokens = new ArrayCollection();
     }
 
     #[PrePersist]
@@ -235,6 +240,36 @@ class User implements UserInterface, LegacyPasswordAuthenticatedUserInterface
             // set the owning side to null (unless already changed)
             if ($article->getAuthor() === $this) {
                 $article->setAuthor(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, UserToken>
+     */
+    public function getTokens(): Collection
+    {
+        return $this->tokens;
+    }
+
+    public function addToken(UserToken $token): static
+    {
+        if (!$this->tokens->contains($token)) {
+            $this->tokens->add($token);
+            $token->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeToken(UserToken $token): static
+    {
+        if ($this->tokens->removeElement($token)) {
+            // set the owning side to null (unless already changed)
+            if ($token->getUser() === $this) {
+                $token->setUser(null);
             }
         }
 

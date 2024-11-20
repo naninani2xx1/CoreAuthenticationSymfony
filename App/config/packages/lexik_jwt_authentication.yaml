@@ -4,10 +4,19 @@ lexik_jwt_authentication:
     pass_phrase: '%env(JWT_PASSPHRASE)%'
     token_ttl: 3600 # in seconds, default is 3600
     blocklist_token:
-        enabled: false
+        enabled: true
         cache: cache.app
     api_platform:
         enabled: true
         check_path: /api/v1/auth
         username_path: username
         password_path: password
+#    token_extractors:
+#        authorization_header:
+#            enabled: true
+#            prefix: Bearer
+#            name: Authorization
+#    encoder:
+#        service: lexik_jwt_authentication.encoder.lcobucci
+#        signature_algorithm: RS256
+#        crypto_engine: openssl

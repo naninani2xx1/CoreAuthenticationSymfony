@@ -1,4 +1,8 @@
 api_auth:
     path: '/auth'
     methods: ['POST']
+api_logout:
+    path: '/auth'
+    methods: ['DELETE']
+    controller: App\ApiBundle\Controller\SecurityController::logout
 # User Route

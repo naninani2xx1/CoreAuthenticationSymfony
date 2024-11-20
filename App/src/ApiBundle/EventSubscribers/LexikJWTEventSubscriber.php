@@ -2,6 +2,7 @@
 
 namespace App\ApiBundle\EventSubscribers;
 
+use App\Entity\UserToken;
 use Lexik\Bundle\JWTAuthenticationBundle\Event\AuthenticationSuccessEvent;
 use Lexik\Bundle\JWTAuthenticationBundle\Event\JWTCreatedEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -17,11 +18,12 @@ final class LexikJWTEventSubscriber implements EventSubscriberInterface
         $this->serializer = $serializer;
     }
 
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
             'lexik_jwt_authentication.on_authentication_success' =>  [
-                ['onAuthenticationSuccessEvent', 0]
+                ['onAuthenticationSuccessEvent', 10],
+                ['onCreateUserToken', 0]
             ],
             'lexik_jwt_authentication.on_jwt_created' =>  [
                 ['onJWTCreatedEvent', 0]
@@ -44,6 +46,11 @@ final class LexikJWTEventSubscriber implements EventSubscriberInterface
 
     public function onJWTCreatedEvent(JWTCreatedEvent $event): void
     {
-        
+
+    }
+
+    public function onCreateUserToken(AuthenticationSuccessEvent $event)
+    {
+
     }
 }
