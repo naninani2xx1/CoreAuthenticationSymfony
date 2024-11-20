@@ -2,10 +2,14 @@
 
 namespace App\ApiBundle\EventSubscribers;
 
+use App\ApiBundle\Traits\SecurityTrait;
+use Doctrine\ORM\EntityManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -13,14 +17,27 @@ use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\Uid\Uuid;
 
-class ApiEventSubscriber implements EventSubscriberInterface
+final class ApiEventSubscriber implements EventSubscriberInterface
 {
-    private readonly  LoggerInterface $logger;
+    use SecurityTrait;
 
-    public function __construct(LoggerInterface $logger)
+    private readonly LoggerInterface $logger;
+    private readonly ?JWTTokenManagerInterface $tokenManager;
+    private readonly ?EntityManagerInterface $manager;
+
+    private readonly RequestStack $requestStack;
+
+    public function __construct(
+        LoggerInterface        $logger, JWTTokenManagerInterface $tokenManager,
+        EntityManagerInterface $manager,  RequestStack $requestStack,
+    )
     {
         $this->logger = $logger;
+        $this->tokenManager = $tokenManager;
+        $this->manager = $manager;
+        $this->requestStack = $requestStack;
     }
+
     public static function getSubscribedEvents(): array
     {
         return array(
@@ -32,8 +49,7 @@ class ApiEventSubscriber implements EventSubscriberInterface
 
     function onKernelException(ExceptionEvent $event): void
     {
-        $request = $event->getRequest();
-        if (!$this->isCheckFirewallApi($request)) {
+        if (!$this->isCheckFirewallApi()) {
             return;
         }
 
@@ -50,6 +66,9 @@ class ApiEventSubscriber implements EventSubscriberInterface
         $event->setResponse($response);
     }
 
+    /**
+     * @throws JWTDecodeFailureException
+     */
     public function onKernelRequest(RequestEvent $event): void
     {
         if (!$event->isMainRequest()) {
@@ -57,9 +76,14 @@ class ApiEventSubscriber implements EventSubscriberInterface
         }
 
         $request = $event->getRequest();
-        if (!$this->isCheckFirewallApi($request)) {
+        if (!$this->isCheckFirewallApi()) {
             return;
         }
+        if (!$this->isCheckPathRefreshToken()) {
+            $token = $this->getTokenFromHeader();
+            $this->checkTokenInDB($token);
+        }
+
 
         $transactionId = Uuid::v4()->toRfc4122();
         $request->attributes->set('transactionId', $transactionId);
@@ -70,13 +94,14 @@ class ApiEventSubscriber implements EventSubscriberInterface
             'method' => $request->getMethod(),
         ]);
     }
+
     function onResponse(ResponseEvent $event): void
     {
         if (!$event->isMainRequest()) {
             return;
         }
         $request = $event->getRequest();
-        if (!$this->isCheckFirewallApi($request)) {
+        if (!$this->isCheckFirewallApi()) {
             return;
         }
 
@@ -88,7 +113,7 @@ class ApiEventSubscriber implements EventSubscriberInterface
             $data['transactionId'] = $transactionId;
             $response->setContent(json_encode($data));
         }
-        if($response->getStatusCode() != Response::HTTP_OK && $response->getStatusCode() != Response::HTTP_CREATED) {
+        if ($response->getStatusCode() != Response::HTTP_OK && $response->getStatusCode() != Response::HTTP_CREATED) {
             $this->logger->error('Transaction failed', [
                 'transId' => $transactionId,
                 'status' => $response->getStatusCode(),
@@ -102,10 +127,5 @@ class ApiEventSubscriber implements EventSubscriberInterface
             'method' => $request->getMethod(),
             'data' => $response->getContent()
         ]);
-    }
-
-    private function isCheckFirewallApi(Request $request): bool
-    {
-        return str_starts_with($request->getPathInfo(), '/api');
     }
 }

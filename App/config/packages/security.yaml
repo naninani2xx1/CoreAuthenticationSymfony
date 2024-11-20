@@ -15,6 +15,14 @@ security:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
+        auth_refresh_api:
+            pattern: ^/api/v1/token
+            stateless: true
+            methods: ["GET"]
+            refresh_jwt:
+                check_path: /api//v1/token
+            provider: app_user_provider
+
         auth_api:
             pattern: ^/api/v1/auth
             stateless: true
@@ -23,17 +31,14 @@ security:
                 check_path: /api/v1/auth
                 success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
-            provider: app_user_provider
             methods:  ['POST']
+            provider: app_user_provider
 
         api_v1:
             pattern: ^/api/v1
             stateless: true
             entry_point: jwt
             jwt: ~
-#            logout:
-#                path: api_auth
-
             provider: app_user_provider
 
         main:
@@ -50,6 +55,7 @@ security:
     access_control:
         - { path: ^/api/v1/auth$, roles: PUBLIC_ACCESS, methods: ['POST']  }
         - { path: ^/api/v1/auth$, roles: IS_AUTHENTICATED_FULLY, methods: ['DELETE']  }
+        - { path: ^/api/v1/token, roles: PUBLIC_ACCESS, methods: ['GET']  }
         - { path: '^/api/v1/docs(\.[a-zA-Z0-9]+)?$', roles: PUBLIC_ACCESS }
         - { path: ^/api/v1/,       roles: IS_AUTHENTICATED_FULLY }
 
