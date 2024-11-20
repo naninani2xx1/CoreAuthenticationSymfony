@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: PostRepository::class)]
-#[ORM\Table(name: '`post`')]
+#[ORM\Table(name: '`article`')]
 #[ApiResource(
     operations: [
         new Post(

@@ -20,7 +20,7 @@ security:
             stateless: true
             methods: ["GET"]
             refresh_jwt:
-                check_path: /api//v1/token
+                check_path: /api/v1/token
             provider: app_user_provider
 
         auth_api:

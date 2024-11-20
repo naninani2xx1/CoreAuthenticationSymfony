@@ -9,4 +9,5 @@ use Gesdinet\JWTRefreshTokenBundle\Entity\RefreshToken as BaseRefreshToken;
 #[ORM\Table(name: 'user_refresh_tokens')]
 class UserRefreshToken extends BaseRefreshToken
 {
+
 }
